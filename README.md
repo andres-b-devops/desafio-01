@@ -1,5 +1,8 @@
 # Gestión de usuarios en Linux usando Pipeline Declarativo
 
+***Por: Andrés Burbano***
+
+---
 El presente documento muestra los pasos detallados para la implementación de un *pipeline declarativo* en Jenkins cuyo propósito es la gestión de usuarios dentro de un sistema Linux.
 
 ---
@@ -197,6 +200,8 @@ ls -alh /home
         drwxr-x---  2 nombreusuario contabilidad 4.0K Nov 17 00:09 nombreusuario
         drwxr-x---  9 ubuntu        ubuntu       4.0K Nov 14 17:48 ubuntu
 ```
+
+---
 
 ### 2.3. Job para la Eliminar un Usuario
 #### Paso 1: Crear el Pipeline Declarativo
