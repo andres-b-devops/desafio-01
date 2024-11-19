@@ -1,0 +1,83 @@
+pipeline {
+    agent any
+    stages {
+        stage('Validar Parámetros') {
+            steps {
+                script {
+                    if (!USERNAME || !NOMBRE || !APELLIDO || !DEPARTAMENTO) {
+                        error "Todos los parámetros deben ser proporcionados."
+                    }
+                }
+            }
+        }
+        stage('Crear Usuario') {
+            steps {
+                script {
+                    // Generar password temporal
+                    def tempPassword = UUID.randomUUID().toString().replaceAll('-', '').take(8)
+                    
+                    // Comandos para crear usuario y asignar al grupo
+                    sh """
+                        sudo useradd -m -c "${NOMBRE} ${APELLIDO}" -g ${DEPARTAMENTO} -s /bin/bash ${USERNAME}
+                        echo "${USERNAME}:${tempPassword}" | sudo chpasswd
+                        sudo chage -d 0 ${USERNAME}
+                    """
+                    
+                    // Guardar el password temporal en una variable
+                    env.TEMP_PASSWORD = tempPassword
+                }
+            }
+        }
+        stage('Mostrar Información') {
+            steps {
+                echo "Usuario creado exitosamente."
+                echo "Nombre: ${NOMBRE} ${APELLIDO}"
+                echo "Username: ${USERNAME}"
+                echo "Password temporal: ${env.TEMP_PASSWORD}"
+            }
+        }
+        stage('Generar Plantilla HTML') {
+            steps {
+                script {
+                    def htmlContent = """
+                    <html>
+                    <body>
+                        <h1>Bienvenido, ${NOMBRE} ${APELLIDO}</h1>
+                        <p>Su usuario ha sido creado con el nombre de usuario: <strong>${USERNAME}</strong></p>
+                        <p>Su password temporal es: <strong>${env.TEMP_PASSWORD}</strong></p>
+                        <p>Por favor, cambie su password en el primer inicio de sesión.</p>
+                    </body>
+                    </html>
+                    """
+                    writeFile file: 'bienvenida.html', text: htmlContent
+                    echo "Plantilla HTML generada: bienvenida.html"
+                }
+            }
+        }
+        stage('Mostrar Plantilla en Consola') {
+            steps {
+                script {
+                    // Leer y mostrar la plantilla en la consola
+                    def htmlOutput = readFile 'bienvenida.html'
+                    echo "Plantilla Generada:"
+                    echo htmlOutput
+                }
+            }
+        }
+    }
+    post {
+        success {
+            echo "Usuario: ${USERNAME}"
+            echo "Password: ${env.TEMP_PASSWORD}"
+            echo "Departamento: ${DEPARTAMENTO}"
+        }
+        aborted {
+            echo "El proceso fue abortado. El usuario no fue creado."
+            sh "sudo userdel -r ${USERNAME}"
+        }
+        failure {
+            echo "Hubo un error en el proceso. Eliminando usuario si fue creado."
+            sh "sudo userdel -r ${USERNAME} || true" // Evita errores si el usuario no existe
+        }
+    }
+}

@@ -1,0 +1,39 @@
+pipeline {
+    agent any
+    stages {
+        stage('Validar Parámetro') {
+            steps {
+                script {
+                    if (!USERNAME) {
+                        error "El username debe ser proporcionado."
+                    }
+                }
+            }
+        }
+        stage('Eliminar Usuario') {
+            steps {
+                script {
+                    sh """
+                        sudo userdel -r ${USERNAME}
+                    """
+                }
+            }
+        }
+        stage('Confirmación') {
+            steps {
+                echo "Usuario ${USERNAME} eliminado exitosamente junto con su directorio home."
+            }
+        }
+    }
+    post {
+        success {
+            echo "El usuario ${USERNAME} fue eliminado exitosamente."
+        }
+        aborted {
+            echo "El proceso fue abortado. No se eliminó el usuario ${USERNAME}."
+        }
+        failure {
+            echo "No se pudo eliminar el usuario ${USERNAME} debido a un error."
+        }
+    }
+}
