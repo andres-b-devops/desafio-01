@@ -47,11 +47,11 @@ jenkins ALL=(ALL:ALL) NOPASSWD:ALL
 ```
 
 **3. Crear grupos de Departamentos**:
-Se debe crear en el sistema Linux los siguientes grupos: ```contabilidad```,```finanzas```,```tecnología``` con el siguiente código:
+Se debe crear en el sistema Linux los siguientes grupos: ```contabilidad```,```finanzas```,```tecnologia``` con el siguiente código:
 ```bash
 sudo groupadd contabilidad
 sudo groupadd finanzas
-sudo groupadd tecnología
+sudo groupadd tecnologia
 ```
 Verificar que los grupos fueron creados con la siguiente instrucción:  ```tail /etc/group```, debe mostrar una salida como la siguiente:
 ```bash
@@ -157,6 +157,21 @@ pipeline {
             }
         }
     }
+    post {
+        success {
+            echo "Usuario: ${USERNAME}"
+            echo "Password: ${env.TEMP_PASSWORD}"
+            echo "Departamento: ${DEPARTAMENTO}"
+        }
+        aborted {
+            echo "El proceso fue abortado. El usuario no fue creado."
+            sh "sudo userdel -r ${USERNAME}"
+        }
+        failure {
+            echo "Hubo un error en el proceso. Eliminando usuario si fue creado."
+            sh "sudo userdel -r ${USERNAME} || true" // Evita errores si el usuario no existe
+        }
+    }
 }
 ```
 
@@ -164,7 +179,7 @@ pipeline {
 
 Darle click al botón play que dice "Build with Parameters". Se solicitarán los parámetros. Una vez completados, el pipeline creará el usuario y mostrará en pantalla el password temporal y la plantilla HTML.
 
-#### Paso 5: Verificación de creación del usuario
+#### Paso 5: Verificación de creación del usuario en Linux con su respectivo departamento.
 
 Comprobar que se haya creado el usuario en la terminal de Linux
 * Con ***Finger***:
@@ -185,7 +200,7 @@ cat /etc/passwd | grep nombreusuario
 
 // Resultado esperado:
 
-        nombreusuario:x:1002:1004:Nombre Usuario:/home/nombreusuario:/bin/bash
+        nombreusuario:x:1002:1005:Nombre Usuario:/home/nombreusuario:/bin/bash
 ```
 Comprobar que se haya creado el directorio home del usuario en la terminal de Linux
 
@@ -195,12 +210,83 @@ ls -alh /home
 
 // Resultado esperado:
 
-        drwxr-xr-x  5 root          root         4.0K Nov 17 00:25 .
-        drwxr-xr-x 22 root          root         4.0K Nov 16 10:48 ..
-        drwxr-x---  2 nombreusuario contabilidad 4.0K Nov 17 00:09 nombreusuario
-        drwxr-x---  9 ubuntu        ubuntu       4.0K Nov 14 17:48 ubuntu
+        drwxr-xr-x  5 root          root      4.0K Nov 17 00:25 .
+        drwxr-xr-x 22 root          root      4.0K Nov 16 10:48 ..
+        drwxr-x---  2 nombreusuario finanzas  4.0K Nov 17 00:09 nombreusuario
+        drwxr-x---  9 ubuntu        ubuntu    4.0K Nov 14 17:48 ubuntu
+```
+* Inspeccionar que los grupos pertenecientes con el usuario
+(con el comando ```id nombreusuario```)
+
+```bash
+id nombreusuario
+
+// Resultado esperado:
+
+        uid=1002(nombreusuario) gid=1005(finanzas) groups=1005(finanzas)
+
+        drwxr-xr-x  5 root          root      4.0K Nov 17 00:25 .
+        drwxr-xr-x 22 root          root      4.0K Nov 16 10:48 ..
+        drwxr-x---  2 nombreusuario finanzas  4.0K Nov 17 00:09 nombreusuario
+        drwxr-x---  9 ubuntu        ubuntu    4.0K Nov 14 17:48 ubuntu
 ```
 
+* Verificar que se pueda ingresar con la contraseña temporal y que solicite cambiarla en el primer inicio de sesión
+
+  1.	Impersonar el usuario con el comando: ```sudo su – nombreusuario```
+  2.	Ingresar la contraseña generada en el pipeline
+  3.	Ingresar la nueva contraseña
+  4.	Repetir la nueva contraseña 
+  5.	Verificar que se haya pasado al nuevo usuario en la terminal (nombreusuario@devopsbootcamp)
+
+```bash
+sudo su - nombreusuario
+
+// Resultado esperado:
+
+      You are required to change your password immediately (administrator enforced).
+      Changing password for nombreusuario.
+      Current password:
+      New password:
+      Retype new password:
+      
+      nombreusuario@devopsbootcamp:~$
+
+```
+
+*	Verificar que esté dentro del directorio home asociado al usuario con el comando ```pwd```
+```bash
+
+nombreusuario@devopsbootcamp:~$ pwd
+
+// Resultado esperado:
+
+      /home/nombreusuario
+
+```
+* Crear un archivo de texto, luego verificar que el propietario sea el usuario “nombreusuario” y el grupo sea “finanzas”:
+ 
+```bash
+nombreusuario@devopsbootcamp:~$ echo "Hola mundo!" >> saludo.txt
+nombreusuario@devopsbootcamp:~$ cat saludo.txt
+
+// Resultado esperado:
+
+      Hola mundo!
+
+nombreusuario@devopsbootcamp:~$ ls -alh
+
+// Resultado esperado:
+
+      total 24K
+      4.0K drwxr-x--- 2 nombreusuario finanzas 4.0K Nov 18 23:41 .
+      4.0K drwxr-xr-x 5 root        root     4.0K Nov 18 23:26 ..
+      4.0K -rw-r--r-- 1 nombreusuario finanzas  220 Mar 31  2024 .bash_logout
+      4.0K -rw-r--r-- 1 nombreusuario finanzas 3.7K Mar 31  2024 .bashrc
+      4.0K -rw-r--r-- 1 nombreusuario finanzas  807 Mar 31  2024 .profile
+      4.0K -rw-r--r-- 1 nombreusuario finanzas   12 Nov 18 23:41 saludo.txt
+
+```
 ---
 
 ### 2.3. Job para la Eliminar un Usuario
@@ -237,6 +323,17 @@ pipeline {
             steps {
                 echo "Usuario ${USERNAME} eliminado exitosamente junto con su directorio home."
             }
+        }
+    }
+    post {
+        success {
+            echo "El usuario ${USERNAME} fue eliminado exitosamente."
+        }
+        aborted {
+            echo "El proceso fue abortado. No se eliminó el usuario ${USERNAME}."
+        }
+        failure {
+            echo "No se pudo eliminar el usuario ${USERNAME} debido a un error."
         }
     }
 }
