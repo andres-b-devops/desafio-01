@@ -1,0 +1,36 @@
++---------------------------+
+|       Usuarios            |
+|   (Administradores)       |
++------------+--------------+
+             |
+             | Acceden vía navegador web
+             v
++---------------------------+
+|      Jenkins Server       |
+| +-----------------------+ |
+| | Job: CrearUsuario      | |
+| | Job: EliminarUsuario   | |
+| +-----------------------+ |
++---------------------------+
+             |
+             | Ejecuta Pipelines
+             v
++---------------------------+
+|     Jenkins Agent         |
+| (Nodo Ejecutando Jobs)    |
++------------+--------------+
+             |
+             | Ejecuta comandos (useradd, userdel)
+             v
++---------------------------+
+|    Sistema Linux          |
+|  (Gestión de Usuarios)    |
++---------------------------+
+             |
+             | Genera resultados
+             v
++---------------------------+
+|   Output del Pipeline     |
+| - Logs en consola         |
+| - Archivo bienvenida.html |
++---------------------------+

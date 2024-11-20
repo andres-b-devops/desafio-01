@@ -35,6 +35,10 @@ Se tendrán en cuenta estos datos de entrada:
 - ✅ Recibe como parámetro el id del usuario (username)
 - ✅ Eliminará tanto el ***grupo*** del usuario como el directorio ***home*** del mismo
 ---
+#### Diagrama de alto nivel para el sistema de Gestión de Usuarios en Jenkins:
+![DiagramaAltoNivel](./img/DiagramaAltoNivel.svg)
+
+---
 
 ## 2. Instalación
 ### 2.1. Requisitos previos:
